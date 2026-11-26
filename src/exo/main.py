@@ -1,7 +1,6 @@
 import argparse
 import multiprocessing as mp
 import os
-import resource
 import shutil
 import signal
 import sys
@@ -13,7 +12,6 @@ from typing import Self
 import anyio
 from anyio import to_thread
 from anyio.lowlevel import checkpoint as anyio_checkpoint
-from daemon import DaemonContext  # pyright: ignore[reportMissingTypeStubs]
 from exo_rs import Pidfile, PidfileError
 from loguru import logger
 from pydantic import PositiveInt
@@ -45,6 +43,7 @@ from exo.shared.types.common import NodeId, SessionId
 from exo.shared.types.events import NodeLeft
 from exo.shared.types.state import State
 from exo.utils import STDIO_FDS
+from exo.utils.resource_limits import ensure_nofile_limit
 from exo.utils.channels import Receiver, channel
 from exo.utils.exit_guard import exit_if_shutdown_hangs
 from exo.utils.pydantic_ext import FrozenModel
@@ -414,6 +413,16 @@ def main():
     # Parse args first => --help or bad args don't require PID-locking
     args = Args.parse()
 
+    # Double-fork daemonization relies on POSIX process semantics and is not
+    # available on Windows. Keep Windows startup in the foreground.
+    if args.legacy_daemon and os.name == "nt":
+        print(
+            "--legacy-daemon is only supported on macOS and Linux; "
+            "run EXO in the foreground on Windows.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2)
+
     # Exit early if cannot acquire PID file
     try:
         pidfile = Pidfile(EXO_PID_FILE, 0o0600)
@@ -423,6 +432,9 @@ def main():
 
     try:
         if args.legacy_daemon:
+            # Import only on POSIX: python-daemon is not available on Windows.
+            from daemon import DaemonContext  # pyright: ignore[reportMissingTypeStubs]
+
             # keep stdio backed by explicit /dev/null streams. multiprocessing spawn expects
             # valid stdio FDs; letting DaemonContext close/reopen them can break runner startup.
             for stream in (sys.stdout, sys.stderr, sys.__stdout__, sys.__stderr__):
@@ -465,9 +477,7 @@ def main():
 
 
 def main_inner(args: "Args"):
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    target = min(max(soft, 65535), hard)
-    resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+    ensure_nofile_limit(65535)
 
     mp.set_start_method("spawn", force=True)
 

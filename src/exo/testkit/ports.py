@@ -42,7 +42,7 @@ class PortLease:
     lock: FileLock
 
     def release(self) -> None:
-        self.lock.close()
+        self.lock.release()
 
 
 def lease_port() -> PortLease:

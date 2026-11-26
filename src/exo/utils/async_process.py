@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable, Mapping
 from multiprocessing.process import BaseProcess
 
 if os.name == "nt":
-    from multiprocessing.resource_sharer import DupHandle as DupFd
+    from multiprocessing.reduction import DupHandle as DupFd
 else:
     from multiprocessing.resource_sharer import DupFd
 from typing import final

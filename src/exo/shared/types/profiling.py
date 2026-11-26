@@ -19,6 +19,10 @@ class MemoryUsage(FrozenModel):
     # the RAM). macOS keeps the rest for itself, so a model can't use all of a Mac's free
     # memory. None where it isn't known.
     gpu_working_set: Memory | None = None
+    # Discrete GPU memory, when available. Unlike Metal's working-set limit, gpu_available
+    # is live free VRAM and is refreshed while the node runs.
+    gpu_total: Memory | None = None
+    gpu_available: Memory | None = None
 
     @classmethod
     def from_bytes(
@@ -29,6 +33,8 @@ class MemoryUsage(FrozenModel):
         swap_total: int,
         swap_available: int,
         gpu_working_set: Memory | None = None,
+        gpu_total: Memory | None = None,
+        gpu_available: Memory | None = None,
     ) -> Self:
         return cls(
             ram_total=Memory.from_bytes(ram_total),
@@ -36,11 +42,18 @@ class MemoryUsage(FrozenModel):
             swap_total=Memory.from_bytes(swap_total),
             swap_available=Memory.from_bytes(swap_available),
             gpu_working_set=gpu_working_set,
+            gpu_total=gpu_total,
+            gpu_available=gpu_available,
         )
 
     @classmethod
     def from_psutil(
-        cls, *, override_memory: int | None, gpu_working_set: Memory | None = None
+        cls,
+        *,
+        override_memory: int | None,
+        gpu_working_set: Memory | None = None,
+        gpu_total: Memory | None = None,
+        gpu_available: Memory | None = None,
     ) -> Self:
         vm = psutil.virtual_memory()
         sm = psutil.swap_memory()
@@ -51,6 +64,8 @@ class MemoryUsage(FrozenModel):
             swap_total=sm.total,
             swap_available=sm.free,
             gpu_working_set=gpu_working_set,
+            gpu_total=gpu_total,
+            gpu_available=gpu_available,
         )
 
 

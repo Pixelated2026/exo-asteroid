@@ -58,19 +58,23 @@ def test_the_gpus_working_set_is_most_of_the_ram() -> None:
 
 
 def test_cuda_device_info_reports_total_and_free_vram() -> None:
-    total, available = _gpu_memory_from_device_info(
+    result = _gpu_memory_from_device_info(
         {"total_memory": 12 * GB, "free_memory": 9 * GB}
     )
 
+    assert result is not None
+    total, available = result
     assert total == Memory.from_bytes(12 * GB)
     assert available == Memory.from_bytes(9 * GB)
 
 
 def test_cuda_device_info_accepts_memory_size_alias() -> None:
-    total, available = _gpu_memory_from_device_info(
+    result = _gpu_memory_from_device_info(
         {"memory_size": 24 * GB, "free_memory": 20 * GB}
     )
 
+    assert result is not None
+    total, available = result
     assert total == Memory.from_bytes(24 * GB)
     assert available == Memory.from_bytes(20 * GB)
 

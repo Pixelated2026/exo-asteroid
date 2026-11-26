@@ -1,7 +1,6 @@
 """The simulated network on its own: discovery relay, proxied links, and both kinds of cut."""
 
 import contextlib
-import fcntl
 import socket
 import threading
 import time
@@ -10,6 +9,7 @@ from dataclasses import dataclass
 from typing import cast
 
 import pytest
+from filelock import FileLock, Timeout
 
 from exo.testkit.netsim import NetSim
 from exo.testkit.ports import LEASES
@@ -202,8 +202,9 @@ def test_stub_ring_ports_are_one_per_rank_and_never_shared_between_clusters() ->
             accepted.close()
         listener.close()
         # ...and every other harness on the machine skips it while it is leased
-        with (LEASES / f"{port}.lock").open("a") as other, pytest.raises(OSError):
-            fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        other = FileLock(LEASES / f"{port}.lock", timeout=0)
+        with pytest.raises(Timeout):
+            other.acquire()
     finally:
         first.stop()
         second.stop()

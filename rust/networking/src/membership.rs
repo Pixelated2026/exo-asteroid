@@ -2156,6 +2156,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn the_clock_that_counts_sleep_is_read_and_moves_with_the_awake_one() {
         let before = Now::read();

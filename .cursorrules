@@ -62,3 +62,4 @@ If you spot a rule violation within code that you've not been asked to work on d
 ### One-Sentence Summary
 
 Write strictly-typed, pure, self-describing Python that uses Pydantic, well-scoped side-effects, immutable state, approved dependencies, and explicit error handling
+

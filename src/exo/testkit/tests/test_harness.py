@@ -1,7 +1,7 @@
 """The harness's own helpers, without starting nodes."""
 
-from collections.abc import AsyncGenerator, Mapping
 import sys
+from collections.abc import AsyncGenerator, Mapping
 from pathlib import Path
 
 import pytest

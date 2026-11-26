@@ -17,7 +17,7 @@ from exo.master.tests.conftest import (
 from exo.shared.models.model_cards import ModelCard, ModelId, ModelTask
 from exo.shared.topology import Topology
 from exo.shared.types.backends import Backend
-from exo.shared.types.common import NodeId
+from exo.shared.types.common import Host, NodeId
 from exo.shared.types.events import (
     InstanceDeleted,
 )
@@ -1270,3 +1270,48 @@ def test_which_runners_hold_memory_they_have_not_taken_yet() -> None:
         RunnerShuttingDown(),
     ):
         assert free_gb(status) == 10.0, status
+
+
+
+def test_memory_once_loaded_reserves_free_gpu_memory_for_starting_runner() -> None:
+    node = NodeId()
+    runner_id = RunnerId()
+    card = _small_model().model_copy(
+        update={"storage_size": Memory.from_gb(6)}
+    )
+    shard = PipelineShardMetadata(
+        model_card=card,
+        device_rank=0,
+        world_size=1,
+        start_layer=0,
+        end_layer=card.n_layers,
+        n_layers=card.n_layers,
+    )
+    assignments = ShardAssignments(
+        model_id=card.model_id,
+        runner_to_shard={runner_id: shard},
+        node_to_runner={node: runner_id},
+    )
+    instance = MlxRingInstance(
+        instance_id=InstanceId(),
+        shard_assignments=assignments,
+        hosts_by_node={node: [Host(ip="0.0.0.0", port=50000)]},
+        ephemeral_port=50000,
+    )
+    usage = MemoryUsage(
+        ram_total=Memory.from_gb(32),
+        ram_available=Memory.from_gb(20),
+        swap_total=Memory(),
+        swap_available=Memory(),
+        gpu_total=Memory.from_gb(12),
+        gpu_available=Memory.from_gb(10),
+    )
+
+    adjusted = memory_once_loaded(
+        {node: usage},
+        {instance.instance_id: instance},
+        {runner_id: RunnerIdle()},
+    )
+
+    assert adjusted[node].ram_available == Memory.from_gb(14)
+    assert adjusted[node].gpu_available == Memory.from_gb(4)

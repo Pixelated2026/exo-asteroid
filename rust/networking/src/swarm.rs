@@ -535,7 +535,7 @@ pub async fn create_swarm(
     Ok(Swarm::new(session, from_client))
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     //! Every node's swarm must report what happens to a peer: a crash (Suspect at once, also
     //! when zenoh keeps the peer's liveliness token, as it does in clusters of three or more:

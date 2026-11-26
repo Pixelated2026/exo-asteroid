@@ -1,0 +1,122 @@
+name: Build unsigned macOS DMG
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - unsigned-macos-dmg
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unsigned-macos-dmg-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build unsigned EXO DMG (Apple Silicon)
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      RELEASE_VERSION: 0.0.0-alpha.0
+      EXO_BUILD_NUMBER: ${{ github.run_number }}
+      EXO_LIBP2P_NAMESPACE: unsigned-macos-dmg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.2
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app
+          xcodebuild -version
+          if ! xcrun -f metal >/dev/null 2>&1; then
+            echo "Metal toolchain is not installed."
+            exit 1
+          fi
+
+      - name: Install Homebrew packages
+        run: brew install just
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python environment
+        run: |
+          uv python install
+          uv sync --locked --extra mlx
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Build dashboard
+        run: |
+          DASHBOARD_OUT=$(nix build .#dashboard --print-build-logs --no-link --print-out-paths)
+          mkdir -p dashboard/build
+          cp -R "$DASHBOARD_OUT"/* dashboard/build/
+
+      - name: Add pinned macmon to PATH
+        run: |
+          MACMON_DIR=$(nix develop --command sh -c 'dirname "$(which macmon)"')
+          echo "$MACMON_DIR" >> "$GITHUB_PATH"
+          brew uninstall macmon 2>/dev/null || true
+          command -v macmon
+
+      - name: Build PyInstaller bundle
+        run: uv run pyinstaller packaging/pyinstaller/exo.spec
+
+      - name: Build unsigned EXO.app
+        env:
+          SPARKLE_FEED_URL: ""
+          SPARKLE_ED25519_PUBLIC: ""
+        run: |
+          cd app/EXO
+          xcodebuild clean build \
+            -scheme EXO \
+            -configuration Release \
+            -derivedDataPath build \
+            MARKETING_VERSION="$RELEASE_VERSION" \
+            CURRENT_PROJECT_VERSION="$EXO_BUILD_NUMBER" \
+            EXO_BUILD_TAG="$RELEASE_VERSION" \
+            EXO_BUILD_COMMIT="$GITHUB_SHA" \
+            SPARKLE_FEED_URL="$SPARKLE_FEED_URL" \
+            SPARKLE_ED25519_PUBLIC="$SPARKLE_ED25519_PUBLIC" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_IDENTITY=""
+          mkdir -p ../../output
+          cp -R build/Build/Products/Release/EXO.app ../../output/EXO.app
+
+      - name: Inject PyInstaller runtime
+        run: |
+          rm -rf output/EXO.app/Contents/Resources/exo
+          mkdir -p output/EXO.app/Contents/Resources
+          cp -R dist/exo output/EXO.app/Contents/Resources/exo
+
+      - name: Create unsigned DMG
+        run: |
+          set -euo pipefail
+          cd output
+          mkdir -p dmg-root
+          cp -R EXO.app dmg-root/
+          ln -s /Applications dmg-root/Applications
+          DMG_NAME="EXO-${RELEASE_VERSION}-unsigned.dmg"
+          hdiutil create -volname "EXO" -srcfolder dmg-root -ov -format UDZO "$DMG_NAME"
+          test -s "$DMG_NAME"
+          shasum -a 256 "$DMG_NAME" | tee "$DMG_NAME.sha256"
+          echo "Created unsigned disk image: $DMG_NAME"
+
+      - name: Upload unsigned DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: EXO-${{ env.RELEASE_VERSION }}-unsigned-macos
+          path: |
+            output/EXO-${{ env.RELEASE_VERSION }}-unsigned.dmg
+            output/EXO-${{ env.RELEASE_VERSION }}-unsigned.dmg.sha256
+          if-no-files-found: error
+          retention-days: 30

@@ -285,9 +285,13 @@ git clone https://github.com/exo-explore/exo
 # Build dashboard
 cd exo/dashboard && npm install && npm run build && cd ..
 
-# Install Python dependencies with the MLX backend for your hardware
-# (NVIDIA: --extra mlx-cuda13 or --extra mlx-cuda12)
-uv sync --extra mlx-cpu
+# Choose exactly one inference backend:
+# NVIDIA CUDA 12:
+uv sync --extra mlx-cuda12
+# Or CUDA 13 (requires an NVIDIA driver >= 580):
+# uv sync --extra mlx-cuda13
+# CPU-only:
+# uv sync --extra mlx-cpu
 
 # Run exo
 uv run exo
@@ -295,7 +299,7 @@ uv run exo
 
 This starts the exo dashboard and API at http://localhost:52415/
 
-**Important note for Linux users:** Currently, exo runs on CPU on Linux. GPU support for Linux platforms is under development. If you'd like to see support for your specific Linux hardware, please [search for existing feature requests](https://github.com/exo-explore/exo/issues) or create a new one.
+**Linux NVIDIA GPU support (experimental):** Install one of the CUDA extras above to use an NVIDIA GPU. MLX CUDA 12 requires an NVIDIA GPU with compute capability SM 7.5 or newer, driver 550.54.14 or newer, CUDA toolkit 12 or newer, and glibc 2.35 or newer. CUDA 13 requires driver 580 or newer. If no CUDA device is available, MLX falls back to CPU. AMD GPUs/ROCm are not supported by this backend yet.
 
 **Configuration Options:**
 
@@ -631,7 +635,7 @@ The tool outputs performance metrics including prompt tokens per second (prompt_
 
 ## Hardware Accelerator Support
 
-On macOS, exo uses the GPU. On Linux, exo currently runs on CPU. We are working on extending hardware accelerator support. If you'd like support for a new hardware platform, please [search for an existing feature request](https://github.com/exo-explore/exo/issues) and add a thumbs up so we know what hardware is important to the community.
+On macOS, exo uses MLX with Metal. On Linux, exo can use NVIDIA GPUs through MLX's CUDA backend when installed with `--extra mlx-cuda12` or `--extra mlx-cuda13`; without a supported CUDA device it uses CPU. AMD GPUs/ROCm are not supported by this backend yet. Linux CUDA support is experimental and should be validated on the target GPU and driver.
 
 ---
 

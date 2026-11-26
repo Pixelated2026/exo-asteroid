@@ -3,12 +3,14 @@ revision = 3
 requires-python = "==3.13.*"
 resolution-markers = [
     "sys_platform == 'darwin'",
+    "sys_platform == 'win32'",
     "platform_machine == 'aarch64' and sys_platform == 'linux'",
     "platform_machine != 'aarch64' and sys_platform == 'linux'",
 ]
 supported-markers = [
     "sys_platform == 'darwin'",
     "sys_platform == 'linux'",
+    "sys_platform == 'win32'",
 ]
 conflicts = [[
     { package = "exo", extra = "mlx-cpu" },
@@ -438,7 +440,7 @@ dependencies = [
     { name = "openai-harmony" },
     { name = "psutil" },
     { name = "pydantic" },
-    { name = "python-daemon" },
+    { name = "python-daemon", marker = "sys_platform != 'win32'" },
     { name = "python-multipart" },
     { name = "rustworkx" },
     { name = "tiktoken" },
@@ -555,7 +557,7 @@ requires-dist = [
     { name = "openai-harmony", specifier = ">=0.0.8" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
-    { name = "python-daemon", specifier = ">=3.1.2" },
+    { name = "python-daemon", marker = "sys_platform != 'win32'", specifier = ">=3.1.2" },
     { name = "python-multipart", specifier = ">=0.0.21" },
     { name = "rustworkx", specifier = ">=0.17.1" },
     { name = "tiktoken", specifier = ">=0.12.0" },

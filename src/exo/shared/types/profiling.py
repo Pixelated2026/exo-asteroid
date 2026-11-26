@@ -20,7 +20,7 @@ class MemoryUsage(FrozenModel):
     # memory. None where it isn't known.
     gpu_working_set: Memory | None = None
     # Discrete GPU memory, when available. Unlike Metal's working-set limit, gpu_available
-    # is live free VRAM and is refreshed while the node runs.
+    # is live free VRAM from the active CUDA device and is refreshed while the node runs.
     gpu_total: Memory | None = None
     gpu_available: Memory | None = None
 

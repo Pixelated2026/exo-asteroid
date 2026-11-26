@@ -1303,8 +1303,7 @@ def test_memory_once_loaded_reserves_free_gpu_memory_for_starting_runner() -> No
         ram_available=Memory.from_gb(20),
         swap_total=Memory(),
         swap_available=Memory(),
-        gpu_total=Memory.from_gb(12),
-        gpu_available=Memory.from_gb(10),
+        gpu_working_set=Memory.from_gb(10),
     )
 
     adjusted = memory_once_loaded(
@@ -1314,4 +1313,4 @@ def test_memory_once_loaded_reserves_free_gpu_memory_for_starting_runner() -> No
     )
 
     assert adjusted[node].ram_available == Memory.from_gb(14)
-    assert adjusted[node].gpu_available == Memory.from_gb(4)
+    assert adjusted[node].gpu_working_set == Memory.from_gb(4)

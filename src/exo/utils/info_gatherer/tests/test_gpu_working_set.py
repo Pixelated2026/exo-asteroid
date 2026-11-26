@@ -5,7 +5,10 @@ import pytest
 
 from exo.shared.types.memory import Memory
 from exo.utils.info_gatherer.macmon import MacmonMetrics
-from exo.utils.info_gatherer.system_info import get_gpu_working_set
+from exo.utils.info_gatherer.system_info import (
+    _gpu_memory_from_device_info,
+    get_gpu_working_set,
+)
 
 GB = 1024**3
 
@@ -51,3 +54,36 @@ def test_the_gpus_working_set_is_most_of_the_ram() -> None:
 
     ram = psutil.virtual_memory().total
     assert 0.5 * ram < working_set.in_bytes < ram
+
+
+
+def test_cuda_device_info_reports_total_and_free_vram() -> None:
+    total, available = _gpu_memory_from_device_info(
+        {"total_memory": 12 * GB, "free_memory": 9 * GB}
+    )
+
+    assert total == Memory.from_bytes(12 * GB)
+    assert available == Memory.from_bytes(9 * GB)
+
+
+def test_cuda_device_info_accepts_memory_size_alias() -> None:
+    total, available = _gpu_memory_from_device_info(
+        {"memory_size": 24 * GB, "free_memory": 20 * GB}
+    )
+
+    assert total == Memory.from_bytes(24 * GB)
+    assert available == Memory.from_bytes(20 * GB)
+
+
+@pytest.mark.parametrize(
+    "info",
+    [
+        {},
+        {"total_memory": 12 * GB},
+        {"total_memory": 0, "free_memory": 1},
+        {"total_memory": 12 * GB, "free_memory": -1},
+        {"total_memory": "12 GB", "free_memory": 1},
+    ],
+)
+def test_invalid_cuda_device_info_is_ignored(info: dict[str, object]) -> None:
+    assert _gpu_memory_from_device_info(info) is None

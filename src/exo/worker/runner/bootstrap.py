@@ -1,6 +1,5 @@
 import multiprocessing
 import os
-import resource
 import threading
 import traceback
 from dataclasses import dataclass
@@ -9,6 +8,7 @@ from typing import Self, cast
 import loguru
 
 from exo.shared.types.events import Event, RunnerEvent
+from exo.utils.resource_limits import ensure_nofile_limit
 from exo.shared.types.tasks import Task, TaskId
 from exo.shared.types.worker.instances import (
     BoundInstance,
@@ -104,8 +104,7 @@ def entrypoint(
 
     exit_with_parent()
 
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    resource.setrlimit(resource.RLIMIT_NOFILE, (min(max(soft, 2048), hard), hard))
+    ensure_nofile_limit(2048)
 
     fast_synch = use_fast_synch(
         bound_instance.instance, os.environ.get("EXO_FAST_SYNCH")

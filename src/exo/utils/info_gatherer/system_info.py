@@ -1,6 +1,7 @@
 import platform
 import socket
 import sys
+from collections.abc import Mapping
 from subprocess import CalledProcessError
 
 import psutil
@@ -39,7 +40,7 @@ async def get_os_build_version() -> str:
 
 
 def _gpu_memory_from_device_info(
-    info: dict[str, object],
+    info: Mapping[str, object],
 ) -> tuple[Memory, Memory] | None:
     """Read total and free memory from MLX's CUDA device information."""
     total = info.get("total_memory", info.get("memory_size"))

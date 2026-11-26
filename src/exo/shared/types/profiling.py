@@ -43,8 +43,6 @@ class MemoryUsage(FrozenModel):
         *,
         override_memory: int | None,
         gpu_working_set: Memory | None = None,
-        gpu_total: Memory | None = None,
-        gpu_available: Memory | None = None,
     ) -> Self:
         vm = psutil.virtual_memory()
         sm = psutil.swap_memory()
@@ -55,8 +53,6 @@ class MemoryUsage(FrozenModel):
             swap_total=sm.total,
             swap_available=sm.free,
             gpu_working_set=gpu_working_set,
-            gpu_total=gpu_total,
-            gpu_available=gpu_available,
         )
 
 

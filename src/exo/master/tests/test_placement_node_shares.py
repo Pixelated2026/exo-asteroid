@@ -21,11 +21,7 @@ from exo.shared.types.worker.shards import Sharding
 GB = 1024**3
 
 
-def _memory(
-    free_gb: float,
-    gpu_working_set_gb: float | None = None,
-    gpu_available_gb: float | None = None,
-) -> MemoryUsage:
+def _memory(free_gb: float, gpu_working_set_gb: float | None = None) -> MemoryUsage:
     return MemoryUsage(
         ram_total=Memory.from_gb(2 * free_gb),
         ram_available=Memory.from_gb(free_gb),
@@ -34,9 +30,6 @@ def _memory(
         gpu_working_set=None
         if gpu_working_set_gb is None
         else Memory.from_gb(gpu_working_set_gb),
-        gpu_available=None
-        if gpu_available_gb is None
-        else Memory.from_gb(gpu_available_gb),
     )
 
 
@@ -258,7 +251,6 @@ def test_usable_memory_is_the_free_memory_up_to_the_gpus_working_set() -> None:
 def test_usable_memory_is_capped_by_live_free_cuda_vram() -> None:
     node = NodeId()
 
-    usable = usable_memory({node: _memory(32, gpu_available_gb=8)})
+    usable = usable_memory({node: _memory(32, gpu_working_set_gb=8)})
 
     assert usable[node].ram_available == Memory.from_gb(8)
-    assert usable[node].gpu_available == Memory.from_gb(8)

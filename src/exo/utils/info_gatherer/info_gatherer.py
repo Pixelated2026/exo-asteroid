@@ -356,17 +356,16 @@ async def _gather_iface_map() -> dict[str, str] | None:
     return ports
 
 
-def _has_nvml_cuda() -> bool:
+def _has_mlx_cuda() -> bool:
+    """Whether this environment's MLX build can actually execute on an NVIDIA GPU."""
     try:
-        import pynvml as nvml  # pyright: ignore[reportMissingModuleSource]
+        import mlx.core as mx
     except ImportError:
         return False
     try:
-        nvml.nvmlInit()
-        try:
-            return nvml.nvmlDeviceGetCount() > 0
-        finally:
-            nvml.nvmlShutdown()
+        if mx.default_device() != mx.gpu:
+            return False
+        return "free_memory" in mx.device_info()
     except Exception:
         return False
 
@@ -379,7 +378,7 @@ class NodeBackends(TaggedModel):
         backends: list[Backend] = [Backend.MlxCpu]
         if IS_DARWIN:
             backends.append(Backend.MlxMetal)
-        if await to_thread.run_sync(_has_nvml_cuda):
+        if await to_thread.run_sync(_has_mlx_cuda):
             backends.append(Backend.MlxCuda)
             backends.append(Backend.Vllm)
         return cls(backends=backends)

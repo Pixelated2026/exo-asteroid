@@ -43,10 +43,10 @@ from exo.shared.types.common import NodeId, SessionId
 from exo.shared.types.events import NodeLeft
 from exo.shared.types.state import State
 from exo.utils import STDIO_FDS
-from exo.utils.resource_limits import ensure_nofile_limit
 from exo.utils.channels import Receiver, channel
 from exo.utils.exit_guard import exit_if_shutdown_hangs
 from exo.utils.pydantic_ext import FrozenModel
+from exo.utils.resource_limits import ensure_nofile_limit
 from exo.utils.task_group import TaskGroup
 from exo.worker.main import Worker
 

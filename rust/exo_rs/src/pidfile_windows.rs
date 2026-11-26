@@ -77,6 +77,7 @@ impl PyPidfile {
         let lock_path = PathBuf::from(lock_path);
         let lock_file = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .read(true)
             .write(true)
             .open(&lock_path)

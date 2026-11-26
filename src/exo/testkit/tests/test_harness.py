@@ -1,6 +1,7 @@
 """The harness's own helpers, without starting nodes."""
 
 from collections.abc import AsyncGenerator, Mapping
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from exo.testkit.ports import LEASES, PORTS
 from exo.testkit.stub.directives import expected_reply
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="testkit process groups are POSIX-only")
 def test_node_ports_are_leased_below_the_ephemeral_range_until_close(
     tmp_path: Path,
 ) -> None:
@@ -37,6 +39,7 @@ def test_node_ports_are_leased_below_the_ephemeral_range_until_close(
     other.release()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="testkit process groups are POSIX-only")
 def test_wait_for_ends_only_when_the_predicate_is_true(tmp_path: Path) -> None:
     cluster = Cluster(1, tmp_path)
     answers = [False, False, True]
@@ -46,6 +49,7 @@ def test_wait_for_ends_only_when_the_predicate_is_true(tmp_path: Path) -> None:
         cluster.wait_for(lambda: False, timeout=0.3, what="nothing")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="testkit process groups are POSIX-only")
 @pytest.mark.parametrize("not_a_bool", [None, 0, 1, "", [], ["x"]])
 def test_wait_for_refuses_a_predicate_that_returns_something_else(
     tmp_path: Path, not_a_bool: object
@@ -56,6 +60,7 @@ def test_wait_for_refuses_a_predicate_that_returns_something_else(
         cluster.wait_for(lambda: not_a_bool, timeout=5, what="it")  # pyright: ignore[reportArgumentType]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="testkit process groups are POSIX-only")
 @pytest.mark.parametrize("value", [0, False, "", [], {}])
 def test_wait_for_value_returns_any_value_but_none(
     tmp_path: Path, value: object

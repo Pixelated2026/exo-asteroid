@@ -527,15 +527,13 @@ class InfoGatherer:
         while True:
             try:
                 gpu_memory = await to_thread.run_sync(get_gpu_memory)
-                gpu_total, gpu_available = (
-                    gpu_memory if gpu_memory is not None else (None, None)
+                gpu_working_set = (
+                    gpu_memory[1] if gpu_memory is not None else self._gpu_working_set
                 )
                 await self.info_sender.send(
                     MemoryUsage.from_psutil(
                         override_memory=override_memory,
-                        gpu_working_set=self._gpu_working_set,
-                        gpu_total=gpu_total,
-                        gpu_available=gpu_available,
+                        gpu_working_set=gpu_working_set,
                     )
                 )
             except Exception as e:

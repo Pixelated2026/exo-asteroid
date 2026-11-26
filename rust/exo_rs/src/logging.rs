@@ -269,10 +269,23 @@ fn epoch_millis(time: SystemTime) -> u64 {
 fn local_time(time: SystemTime) -> String {
     let since = time.duration_since(UNIX_EPOCH).unwrap_or_default();
     let seconds = libc::time_t::try_from(since.as_secs()).unwrap_or(0);
-    // SAFETY: an all-zero `tm` is a valid value, and localtime_r only writes into it
+    // SAFETY: an all-zero `tm` is a valid value, and the platform conversion
+    // function writes the calendar fields into it.
     let mut tm: libc::tm = unsafe { std::mem::zeroed() };
-    // SAFETY: both pointers are to live values for the duration of the call
-    if unsafe { libc::localtime_r(&raw const seconds, &raw mut tm) }.is_null() {
+    #[cfg(unix)]
+    let conversion_failed = {
+        // SAFETY: both pointers are valid for the duration of the call.
+        unsafe { libc::localtime_r(&raw const seconds, &raw mut tm) }.is_null()
+    };
+    #[cfg(windows)]
+    let conversion_failed = {
+        // SAFETY: both pointers are valid for the duration of the call.
+        unsafe { libc::localtime_s(&raw mut tm, &raw const seconds) } != 0
+    };
+    #[cfg(not(any(unix, windows)))]
+    let conversion_failed = true;
+
+    if conversion_failed {
         return format!("{}.{:03}", since.as_secs(), since.subsec_millis());
     }
     format!(

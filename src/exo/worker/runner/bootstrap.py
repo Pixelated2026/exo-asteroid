@@ -16,6 +16,7 @@ from exo.shared.types.worker.instances import (
     MlxJacclInstance,
 )
 from exo.utils.channels import ClosedResourceError, MpReceiver, MpSender
+from exo.utils.resource_limits import ensure_nofile_limit
 from exo.worker.engines.base import Builder
 from exo.worker.engines.mlx.models.spec_registry import fast_synch_allowed
 

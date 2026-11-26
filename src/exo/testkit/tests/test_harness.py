@@ -1,10 +1,10 @@
 """The harness's own helpers, without starting nodes."""
 
-import fcntl
 from collections.abc import AsyncGenerator, Mapping
 from pathlib import Path
 
 import pytest
+from filelock import FileLock, Timeout
 
 from exo.shared.topology import Topology
 from exo.shared.types.common import NodeId
@@ -29,12 +29,12 @@ def test_node_ports_are_leased_below_the_ephemeral_range_until_close(
     ]
     assert len(set(ports)) == 9
     assert all(port in PORTS for port in ports)
-    with (LEASES / f"{ports[0]}.lock").open("a") as other:
-        with pytest.raises(OSError):
-            fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        cluster.close()
-        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        fcntl.flock(other, fcntl.LOCK_UN)
+    other = FileLock(LEASES / f"{ports[0]}.lock", timeout=0)
+    with pytest.raises(Timeout):
+        other.acquire()
+    cluster.close()
+    other.acquire()
+    other.release()
 
 
 def test_wait_for_ends_only_when_the_predicate_is_true(tmp_path: Path) -> None:

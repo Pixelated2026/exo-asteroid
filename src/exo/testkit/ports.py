@@ -8,7 +8,7 @@ delivers every unicast datagram to [::1] to the other socket: the node never hea
 peers, and nothing logs an error.
 
 So every port comes from below the OS's ephemeral range (from 49152 on macOS, 32768 on
-Linux), which it never hands out by itself, and is leased: an flock on a lock file per port
+Linux), which it never hands out by itself, and is leased: a cross-platform file lock per port
 in the temp directory, which every harness sharing it respects.
 """
 

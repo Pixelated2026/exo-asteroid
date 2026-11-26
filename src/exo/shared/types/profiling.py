@@ -15,14 +15,9 @@ class MemoryUsage(FrozenModel):
     ram_available: Memory
     swap_total: Memory
     swap_available: Memory
-    # The most memory a Mac's GPU should use (Metal's recommended working set, about 75% of
-    # the RAM). macOS keeps the rest for itself, so a model can't use all of a Mac's free
-    # memory. None where it isn't known.
+    # Upper bound on memory a model can use on the GPU. On macOS this is Metal's
+    # recommended working set; on Linux with CUDA it is the live free VRAM. None when unknown.
     gpu_working_set: Memory | None = None
-    # Discrete GPU memory, when available. Unlike Metal's working-set limit, gpu_available
-    # is live free VRAM from the active CUDA device and is refreshed while the node runs.
-    gpu_total: Memory | None = None
-    gpu_available: Memory | None = None
 
     @classmethod
     def from_bytes(
@@ -33,8 +28,6 @@ class MemoryUsage(FrozenModel):
         swap_total: int,
         swap_available: int,
         gpu_working_set: Memory | None = None,
-        gpu_total: Memory | None = None,
-        gpu_available: Memory | None = None,
     ) -> Self:
         return cls(
             ram_total=Memory.from_bytes(ram_total),
@@ -42,8 +35,6 @@ class MemoryUsage(FrozenModel):
             swap_total=Memory.from_bytes(swap_total),
             swap_available=Memory.from_bytes(swap_available),
             gpu_working_set=gpu_working_set,
-            gpu_total=gpu_total,
-            gpu_available=gpu_available,
         )
 
     @classmethod

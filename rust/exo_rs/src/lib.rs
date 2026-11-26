@@ -8,6 +8,10 @@ mod allow_threading;
 // mod ident;
 mod logging;
 mod networking;
+#[cfg(unix)]
+mod pidfile;
+#[cfg(windows)]
+#[path = "pidfile_windows.rs"]
 mod pidfile;
 
 use crate::networking::networking_submodule;

@@ -57,6 +57,7 @@ smol = "2.0.2"
 socket2 = "0.6.4"
 tracing = "0.1.44"
 pidfile-rs = { git = "https://github.com/AndreiCravtov/pidfile-rs" }
+fs2 = "0.4.3"
 
 [patch.crates-io]
 zenoh = { git = "https://github.com/evanev7/zenoh.git", branch = "exo" }

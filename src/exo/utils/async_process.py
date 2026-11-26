@@ -7,7 +7,11 @@ import os
 import sys
 from collections.abc import Callable, Iterable, Mapping
 from multiprocessing.process import BaseProcess
-from multiprocessing.resource_sharer import DupFd
+
+if os.name == "nt":
+    from multiprocessing.resource_sharer import DupHandle as DupFd
+else:
+    from multiprocessing.resource_sharer import DupFd
 from typing import final
 
 from anyio import (
@@ -66,6 +70,11 @@ class AsyncProcess:
         self._exitcode: int | None = None
 
     async def run(self, *, task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+        if os.name == "nt":
+            raise RuntimeError(
+                "EXO runner subprocess I/O is not supported on Windows yet; "
+                "the Windows runner transport is being implemented separately."
+            )
         if self._run_cancel_scope is not None or self._done.is_set():
             raise RuntimeError("process has already been started")
 

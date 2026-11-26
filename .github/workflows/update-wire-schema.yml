@@ -1,0 +1,53 @@
+name: Update wire schema snapshot
+
+on:
+  push:
+    branches:
+      - asteroid/core-foundation
+    paths:
+      - "src/exo/routing/wire.py"
+      - "src/exo/shared/types/profiling.py"
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: asteroid/core-foundation
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install schema-generation dependencies
+        run: |
+          uv python install
+          uv sync --locked --extra mlx-none --group dev
+
+      - name: Regenerate and verify wire schema
+        run: |
+          uv run python -m exo.routing.wire_schema --write
+          uv run python -m exo.routing.wire_schema
+
+      - name: Commit generated schema
+        run: |
+          if git diff --quiet -- src/exo/routing/wire_schema.json src/exo/routing/wire_versions.txt; then
+            echo "Wire schema snapshot is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/exo/routing/wire_schema.json src/exo/routing/wire_versions.txt
+          git commit -m "Update wire schema for GPU memory reporting"
+          git push origin HEAD:asteroid/core-foundation

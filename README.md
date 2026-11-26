@@ -638,3 +638,5 @@ On macOS, exo uses the GPU. On Linux, exo currently runs on CPU. We are working 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to exo.
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for project contributor credits.

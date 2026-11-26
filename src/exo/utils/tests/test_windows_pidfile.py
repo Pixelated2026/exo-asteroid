@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -8,13 +10,13 @@ from exo_rs import Pidfile
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows PID lock implementation only")
-def test_windows_pidfile_uses_persistent_sidecar_lock(tmp_path) -> None:
+def test_windows_pidfile_uses_persistent_sidecar_lock(tmp_path: Path) -> None:
     path = tmp_path / "exo.pid"
     lock_path = tmp_path / "exo.pid.lock"
 
     handle = Pidfile(path, 0o0600)
     handle.write()
-    assert path.read_text(encoding="utf-8") == str(__import__("os").getpid())
+    assert path.read_text(encoding="utf-8") == str(os.getpid())
     assert lock_path.exists()
 
     handle.close()

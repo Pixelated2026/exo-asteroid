@@ -228,12 +228,21 @@ def usable_memory(
     A Mac's GPU can use only its working set (about 75% of the RAM), so an idle Mac has more
     memory free than a model can use. A runner whose shard needs more aborts while loading.
     """
-    return {
-        node_id: usage
-        if usage.gpu_working_set is None or usage.gpu_working_set >= usage.ram_available
-        else usage.model_copy(update={"ram_available": usage.gpu_working_set})
-        for node_id, usage in node_memory.items()
-    }
+    usable: dict[NodeId, MemoryUsage] = {}
+    for node_id, usage in node_memory.items():
+        # On Apple Silicon this is Metal's static recommended working-set limit. On Linux
+        # with CUDA, gpu_available is the live free VRAM reported by MLX.
+        gpu_limit = usage.gpu_working_set
+        if usage.gpu_available is not None and (
+            gpu_limit is None or usage.gpu_available < gpu_limit
+        ):
+            gpu_limit = usage.gpu_available
+        usable[node_id] = (
+            usage
+            if gpu_limit is None or gpu_limit >= usage.ram_available
+            else usage.model_copy(update={"ram_available": gpu_limit})
+        )
+    return usable
 
 
 # Runners whose memory is already in their node's report (loaded), or about to be freed
@@ -283,16 +292,21 @@ def memory_once_loaded(
                 unloaded = max(0, status.total_layers - status.layers_loaded)
                 shard = shard * unloaded // status.total_layers
             pending[node_id] += shard
-    return {
-        node_id: usage.model_copy(
-            update={
-                "ram_available": Memory.from_bytes(
-                    max(0, usage.ram_available.in_bytes - pending[node_id])
-                )
-            }
-        )
-        for node_id, usage in node_memory.items()
-    }
+    adjusted: dict[NodeId, MemoryUsage] = {}
+    for node_id, usage in node_memory.items():
+        update: dict[str, Memory] = {
+            "ram_available": Memory.from_bytes(
+                max(0, usage.ram_available.in_bytes - pending[node_id])
+            )
+        }
+        # A starting/loading runner may not have allocated all of its CUDA memory yet.
+        # Reserve its remaining shard from free VRAM as well as system RAM.
+        if usage.gpu_available is not None:
+            update["gpu_available"] = Memory.from_bytes(
+                max(0, usage.gpu_available.in_bytes - pending[node_id])
+            )
+        adjusted[node_id] = usage.model_copy(update=update)
+    return adjusted
 
 
 def place_instance(

@@ -38,6 +38,40 @@ async def get_os_build_version() -> str:
     return process.stdout.decode("utf-8", errors="replace").strip() or "Unknown"
 
 
+def _gpu_memory_from_device_info(
+    info: dict[str, object],
+) -> tuple[Memory, Memory] | None:
+    """Read total and free memory from MLX's CUDA device information."""
+    total = info.get("total_memory", info.get("memory_size"))
+    available = info.get("free_memory")
+    if not isinstance(total, int) or not isinstance(available, int):
+        return None
+    if total <= 0 or available < 0:
+        return None
+    return Memory.from_bytes(total), Memory.from_bytes(available)
+
+
+def get_gpu_memory() -> tuple[Memory, Memory] | None:
+    """Return (total VRAM, free VRAM) for MLX's active Linux CUDA device.
+
+    MLX selects its GPU as the default device when a CUDA backend is available.
+    On CPU-only Linux nodes, macOS, or builds without CUDA, this returns None.
+    """
+    if sys.platform != "linux":
+        return None
+    try:
+        import mlx.core as mx
+    except ImportError:
+        return None
+    try:
+        if mx.default_device() != mx.gpu:
+            return None
+        return _gpu_memory_from_device_info(mx.device_info())
+    except Exception:
+        # A missing driver or an unavailable CUDA device must not prevent exo starting.
+        return None
+
+
 def get_gpu_working_set() -> Memory | None:
     """The most memory this Mac's GPU should use: Metal's recommended working set, which is
     also the limit a runner wires its model's memory up to. None without Metal."""

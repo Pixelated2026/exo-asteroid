@@ -13,13 +13,14 @@ in the temp directory, which every harness sharing it respects.
 """
 
 import contextlib
-import fcntl
 import random
 import socket
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO, final
+from typing import final
+
+from filelock import FileLock, Timeout
 
 PORTS = range(20000, 32768)
 LEASES = Path(tempfile.gettempdir()) / "exo-testkit-ports"
@@ -38,7 +39,7 @@ class PortLease:
     """A port this process may use until it releases it or exits."""
 
     port: int
-    lock: TextIO
+    lock: FileLock
 
     def release(self) -> None:
         self.lock.close()
@@ -50,14 +51,13 @@ def lease_port() -> PortLease:
     start = random.randrange(len(PORTS))
     for offset in range(len(PORTS)):
         port = PORTS[(start + offset) % len(PORTS)]
-        lock = (LEASES / f"{port}.lock").open("a")
+        lock = FileLock(LEASES / f"{port}.lock", timeout=0)
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
-            lock.close()  # another harness holds it
-            continue
+            lock.acquire()
+        except Timeout:
+            continue  # another harness holds it
         if not _unbound(port):
-            lock.close()  # something else is using it
+            lock.release()  # something else is using it
             continue
         return PortLease(port, lock)
     raise RuntimeError("no free port for the harness")

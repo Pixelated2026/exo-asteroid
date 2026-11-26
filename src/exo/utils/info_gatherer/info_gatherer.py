@@ -34,6 +34,7 @@ from exo.utils.task_group import TaskGroup
 from .macmon import MacmonMetrics
 from .system_info import (
     get_friendly_name,
+    get_gpu_memory,
     get_gpu_working_set,
     get_model_and_chip,
     get_network_interfaces,
@@ -526,10 +527,16 @@ class InfoGatherer:
         )
         while True:
             try:
+                gpu_memory = await to_thread.run_sync(get_gpu_memory)
+                gpu_total, gpu_available = (
+                    gpu_memory if gpu_memory is not None else (None, None)
+                )
                 await self.info_sender.send(
                     MemoryUsage.from_psutil(
                         override_memory=override_memory,
                         gpu_working_set=self._gpu_working_set,
+                        gpu_total=gpu_total,
+                        gpu_available=gpu_available,
                     )
                 )
             except Exception as e:
